@@ -28,7 +28,7 @@
 - [Expresiones regulares](#expresiones-regulares)
 - [Filtros](#filtros)
 - [Buenas prácticas](#buenas-prácticas)
-
+- [Formularios](#formularios)
 ---
 
 ## Incluir PHP
@@ -287,7 +287,7 @@ if ($mysqli->connect_errno) die($mysqli->connect_error);
 $stmt = $mysqli->prepare('SELECT id,name FROM products WHERE id=?');
 $stmt->bind_param('i', $id);
 $stmt->execute();
-$res = $stmt->get_result();
+$res = $stmt->get_result();# Formularios en PHP 
 while ($row = $res->fetch_assoc()) print_r($row);
 ```
 
@@ -333,6 +333,127 @@ Validación: `FILTER_VALIDATE_EMAIL`, `*_INT`, `*_FLOAT`, `*_IP`, `*_URL`, `*_RE
 Sanitización: `FILTER_SANITIZE_EMAIL`, `*_NUMBER_INT`, `*_NUMBER_FLOAT`, `*_SPECIAL_CHARS`, `*_FULL_SPECIAL_CHARS`
 
 ---
+
+## Formularios
+### Lectura rápida y nulos
+```php
+// Llega o no llega
+$nombre = $_POST['nombre'] ?? null;      // null si no existe
+$nombre = trim($nombre ?? '');           // '' si era null
+
+// Comprobaciones típicas
+if ($nombre === '') { /* obligatorio */ }
+if (!isset($_POST['email'])) { /* no enviado */ }
+if (empty($_POST['comentario'])) { /* vacío o no enviado */ }
+if (is_null($_POST['edad'] ?? null)) { /* faltó edad */ }
+
+// Diferencias
+// isset: false si no existe o es null
+// empty: true si falsy ('', 0, '0', [], false, null) o no existe
+// is_null: solo null estricto
+```
+
+## Validación con filtros
+```php
+// Unitario con filter_var
+$email = $_POST['email'] ?? '';
+if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+  /* email no válido */
+}
+
+// Directo desde POST con filter_input
+$edad = filter_input(INPUT_POST, 'edad', FILTER_VALIDATE_INT, [
+  'options' => ['min_range'=>1, 'max_range'=>120]
+]);
+
+// Masivo con filter_input_array
+$datos = filter_input_array(INPUT_POST, [
+  'nombre' => ['filter'=>FILTER_SANITIZE_SPECIAL_CHARS],
+  'email'  => ['filter'=>FILTER_VALIDATE_EMAIL],
+  'edad'   => ['filter'=>FILTER_VALIDATE_INT, 'options'=>['min_range'=>1,'max_range'=>120]],
+  'web'    => ['filter'=>FILTER_VALIDATE_URL, 'flags'=>FILTER_NULL_ON_FAILURE],
+]);
+if ($datos['email'] === false) { /* email inválido */ }
+```
+
+## Patrón básico de validación
+```php
+$errores = [];
+
+$nombre = trim($_POST['nombre'] ?? '');
+if ($nombre === '') $errores['nombre'] = 'El nombre es obligatorio';
+
+$email = $_POST['email'] ?? null;
+if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+  $errores['email'] = 'Email no válido';
+}
+
+$pais = $_POST['pais'] ?? '';
+$permitidos = ['ES','FR','IT'];
+if (!in_array($pais, $permitidos, true)) {
+  $errores['pais'] = 'País no válido';
+}
+
+$acepto = isset($_POST['acepto']); // checkbox -> bool
+
+if ($errores) {
+  // devolver a la vista con errores y old()
+} else {
+  // procesar
+}
+```
+
+## Helpers útiles (copiar/pegar)
+```php
+// input(): get con filtro y por defecto
+function input(string $key, $default=null, int $filter=FILTER_UNSAFE_RAW, int $type=INPUT_POST) {
+  $v = filter_input($type, $key, $filter);
+  return $v !== null ? $v : $default;
+}
+
+// old(): repoblar campos tras error (escapado seguro)
+function old(string $key, $default=''): string {
+  return htmlspecialchars((string)($_POST[$key] ?? $default), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+
+// has_error(): marcar campo con error
+function has_error(array $errors, string $key): bool {
+  return array_key_exists($key, $errors);
+}
+
+// e(): alias de escape
+function e(string $s): string {
+  return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+```
+
+## Subida de archivos (mínimo seguro)
+```php
+if (isset($_FILES['archivo']) && $_FILES['archivo']['error'] === UPLOAD_ERR_OK) {
+  $tmp  = $_FILES['archivo']['tmp_name'];
+  $size = $_FILES['archivo']['size'];
+
+  if ($size > 2 * 1024 * 1024) die('Archivo demasiado grande'); // 2 MB
+
+  $finfo = new finfo(FILEINFO_MIME_TYPE);
+  $mime  = $finfo->file($tmp);
+  if (!in_array($mime, ['image/jpeg','image/png','application/pdf'], true)) {
+    die('Tipo no permitido');
+  }
+
+  $ext = match ($mime) {
+    'image/jpeg'=>'jpg','image/png'=>'png','application/pdf'=>'pdf', default=>'bin'
+  };
+  $dest = __DIR__.'/uploads/'.bin2hex(random_bytes(16)).'.'.$ext;
+  if (!move_uploaded_file($tmp, $dest)) die('Error guardando archivo');
+}
+```
+
+## Mini recordatorio (relacionado con *Filtros*)
+- **Validación**: `FILTER_VALIDATE_EMAIL`, `*_INT`, `*_FLOAT`, `*_IP`, `*_URL`, `*_REGEXP`  
+- **Sanitización**: `FILTER_SANITIZE_EMAIL`, `*_NUMBER_INT`, `*_NUMBER_FLOAT`, `*_SPECIAL_CHARS`, `*_FULL_SPECIAL_CHARS`  
+
+> Tip: usa `??` y `??=` para manejar nulos cómodamente, y `?->` (null-safe) en encadenados.
 
 ## Buenas prácticas
 - `error_reporting(E_ALL)` en desarrollo; no mostrar errores en producción.
