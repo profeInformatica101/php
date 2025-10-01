@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Configurar permisos en /var/www/optativa y comprobarlos</title>
+<style>
+  :root{
+    --bg:#0b1020; --text:#e6eefc; --muted:#a3b2d1; --border:#1e2a44;
+    --panel:#0f172a; --panel2:#0d1530; --ok:#16a34a; --warn:#f59e0b; --info:#38bdf8; --bad:#ef4444;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Roboto,Arial}
+  .wrap{width:100%;padding:10px}
+  h1{font-size:clamp(20px,5vw,30px);margin-bottom:6px}
+  p{color:var(--muted);margin-bottom:10px}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--border);border-radius:14px;padding:12px;margin-top:10px}
+  h2{font-size:clamp(17px,3.5vw,24px);margin-bottom:8px}
+  table{width:100%;border-collapse:collapse;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  thead th{background:#0a1022;color:#d9e4ff;text-align:left;padding:10px;font-weight:700}
+  tbody td{padding:10px;border-top:1px solid var(--border);vertical-align:top}
+  code{background:#0a132a;border:1px solid var(--border);padding:2px 6px;border-radius:6px;font-family:ui-monospace,Menlo,Consolas,monospace}
+  pre{background:#0a132a;border:1px solid var(--border);border-radius:10px;padding:10px;overflow:auto;margin-top:8px}
+  .ok{color:var(--ok);font-weight:700}
+  .warn{color:var(--warn);font-weight:700}
+  .info{color:var(--info);font-weight:700}
+  .grid{display:grid;gap:10px}
+  @media(min-width:900px){.grid{grid-template-columns:1fr 1fr}}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .chip{display:inline-flex;gap:6px;align-items:center;padding:4px 8px;border-radius:999px;border:1px solid var(--border);background:#0a132a;color:#dbe7ff;font-size:.92em}
+  .btn{display:inline-block;margin-top:8px;padding:8px 12px;border-radius:10px;background:#1f2d5c;color:#fff;text-decoration:none;border:1px solid #2a3a77}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Permisos correctos en <code>/var/www/optativa</code> y cómo verificarlos</h1>
+    <p>Trabaja con tu usuario (ej. <code>$USER</code>) y comparte grupo con el servidor web (<code>www-data</code>) para evitar usar <code>root</code> y mantener una política de mínimos permisos.</p>
+
+    <!-- PASO 1: AÑADIR AL GRUPO -->
+    <section class="card">
+      <h2>1) Añadir tu usuario al grupo <code>www-data</code></h2>
+      <pre><code>sudo usermod -aG www-data $USER</code></pre>
+      <p class="info">Cierra sesión y vuelve a entrar (o ejecuta <code>newgrp www-data</code>) para que el cambio se aplique.</p>
+      <div class="chips">
+        <span class="chip">🔐 No uses <code>root</code> para editar código</span>
+        <span class="chip">👤 Usuario humano (tú) + grupo <code>www-data</code></span>
+      </div>
+    </section>
+
+    <!-- PASO 2: DUEÑO Y GRUPO DEL PROYECTO -->
+    <section class="card">
+      <h2>2) Asignar dueño y grupo del proyecto</h2>
+      <pre><code>sudo chown -R $USER:www-data /var/www/optativa</code></pre>
+      <p>Tu usuario será el propietario; el servidor web compartirá el grupo.</p>
+    </section>
+
+    <!-- PASO 3: PERMISOS -->
+    <section class="card">
+      <h2>3) Permisos recomendados</h2>
+      <pre><code>sudo find /var/www/optativa -type d -exec chmod 775 {} \;
+sudo find /var/www/optativa -type f -exec chmod 664 {} \;</code></pre>
+      <table aria-label="Resumen de permisos">
+        <thead>
+          <tr><th>Objeto</th><th>Permisos</th><th>Quién puede hacer qué</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Directorios</td>
+            <td class="ok"><code>775</code></td>
+            <td>Propietario y grupo: <b>leer, escribir y entrar</b>. Otros: <b>leer y entrar</b>.</td>
+          </tr>
+          <tr>
+            <td>Archivos</td>
+            <td class="ok"><code>664</code></td>
+            <td>Propietario y grupo: <b>leer y escribir</b>. Otros: <b>leer</b>.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="chips">
+        <span class="chip warn">✍️ Si el servidor <u>no</u> debe escribir, usa 755 (dirs) y 644 (files)</span>
+        <span class="chip">🚫 Evita <code>777</code></span>
+      </div>
+    </section>
+
+    <!-- COMPROBACIONES -->
+    <section class="card">
+      <h2>4) Comprobaciones útiles</h2>
+      <div class="grid">
+        <div>
+          <p><b>A) Confirmar que tu usuario está en el grupo</b></p>
+          <pre><code>id $USER
+groups $USER
+getent group www-data</code></pre>
+          <p class="info">Busca <code>www-data</code> en las salidas. Ejemplo: <code>groups</code> muestra <code>kronos : kronos sudo www-data</code>.</p>
+        </div>
+        <div>
+          <p><b>B) Ver propietario/grupo y permisos del directorio</b></p>
+          <pre><code>ls -ld /var/www/optativa
+stat -c "%A %a %U:%G %n" /var/www/optativa</code></pre>
+          <p class="ok">Esperado (ejemplo): <code>drwxrwxr-x 775 kronos:www-data /var/www/optativa</code></p>
+        </div>
+      </div>
+      <p style="margin-top:6px"><b>C) Comprobar permisos recursivos (muestra 10 ejemplos de cada)</b></p>
+      <pre><code># Directorios con su modo octal
+find /var/www/optativa -type d -printf "%m %u:%g %p\n" | head -n 10
+
+# Archivos con su modo octal
+find /var/www/optativa -type f -printf "%m %u:%g %p\n" | head -n 10</code></pre>
+    </section>
+
+    <!-- TABLA RESUMEN ACCIONES -->
+    <section class="card">
+      <h2>Resumen de acciones</h2>
+      <table>
+        <thead>
+          <tr><th>Acción</th><th>Comando</th><th>Resultado</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Añadirte al grupo</td>
+            <td><code>sudo usermod -aG www-data $USER</code></td>
+            <td class="ok">Tu sesión pertenece a <code>www-data</code> (tras reiniciar sesión).</td>
+          </tr>
+          <tr>
+            <td>Asignar dueño/grupo al proyecto</td>
+            <td><code>sudo chown -R $USER:www-data /var/www/optativa</code></td>
+            <td class="ok">El proyecto queda bajo tu usuario y el grupo del servidor.</td>
+          </tr>
+          <tr>
+            <td>Permisos de directorios</td>
+            <td><code>sudo find /var/www/optativa -type d -exec chmod 775 {} \;</code></td>
+            <td class="ok">Tú y el servidor podéis escribir; otros leen/entran.</td>
+          </tr>
+          <tr>
+            <td>Permisos de archivos</td>
+            <td><code>sudo find /var/www/optativa -type f -exec chmod 664 {} \;</code></td>
+            <td class="ok">Tú y el servidor podéis editar; otros solo leen.</td>
+          </tr>
+          <tr>
+            <td>Verificar pertenencia a grupo</td>
+            <td><code>id $USER</code> / <code>groups $USER</code></td>
+            <td class="info">Debe aparecer <code>www-data</code>.</td>
+          </tr>
+          <tr>
+            <td>Verificar permisos en octal</td>
+            <td><code>stat -c "%A %a %U:%G %n" /var/www/optativa</code></td>
+            <td class="info">Ej.: <code>drwxrwxr-x 775 kronos:www-data /var/www/optativa</code></td>
+          </tr>
+        </tbody>
+      </table>
+      <a class="btn" href="#" onclick="navigator.clipboard.writeText(document.getElementById('bloque').innerText);return false;">📋 Copiar todos los comandos</a>
+      <pre id="bloque"><code># 1) Añadir usuario al grupo del servidor (sal y entra de sesión después)
+sudo usermod -aG www-data $USER
+
+# 2) Establecer dueño y grupo del proyecto
+sudo chown -R $USER:www-data /var/www/optativa
+
+# 3) Permisos recomendados
+sudo find /var/www/optativa -type d -exec chmod 775 {} \;
+sudo find /var/www/optativa -type f -exec chmod 664 {} \;
+
+# 4) Comprobaciones
+id $USER
+groups $USER
+getent group www-data
+ls -ld /var/www/optativa
+stat -c "%A %a %U:%G %n" /var/www/optativa
+find /var/www/optativa -type d -printf "%m %u:%g %p\n" | head -n 10
+find /var/www/optativa -type f -printf "%m %u:%g %p\n" | head -n 10</code></pre>
+    </section>
+
+    <section class="card">
+      <h2>Notas de seguridad</h2>
+      <ul style="margin-left:18px; line-height:1.6">
+        <li>Evita <code>777</code> salvo pruebas puntuales y nunca en producción.</li>
+        <li>Limita las carpetas con escritura del servidor a lo estrictamente necesario (subidas, caché, etc.).</li>
+        <li>En sistemas con SELinux/AppArmor, ajusta contextos/perfiles si el servidor no puede leer aun con permisos correctos.</li>
+      </ul>
+    </section>
+  </div>
+</body>
+</html>
