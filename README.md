@@ -177,6 +177,8 @@ foreach (['a','b','c'] as $v) {
 ## Arrays
 ```php
 $names = ['Joe','James','Peter'];
+$array = array('Joe','James','Peter');
+
 $names[] = 'Jessie';
 echo $names[1]; // James
 echo implode(', ', $names);
