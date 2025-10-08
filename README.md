@@ -197,6 +197,122 @@ $idx = array_search('product 2', array_column($items,'name'));
 `push/pop`, `shift/unshift`, `slice`, `splice`, `sum`, `sort/rsort`, `asort/arsort`, `ksort/krsort`, `usort`, `shuffle`, `range`
 
 ---
+# ⚙️ Funciones útiles de Arrays en PHP
+
+A continuación, se muestran algunas funciones frecuentes con ejemplos prácticos.
+
+---
+
+## 🔍 Búsqueda y claves
+
+```php
+$person = ['name' => 'Ana', 'age' => 25];
+
+// Verificar si una clave existe
+if (array_key_exists('age', $person)) {
+    echo "La clave 'age' existe.<br>";
+}
+
+// Verificar si un valor existe
+if (in_array('Ana', $person)) {
+    echo "El valor 'Ana' está en el array.<br>";
+}
+
+// Obtener todas las claves y valores
+print_r(array_keys($person));   // ['name', 'age']
+print_r(array_values($person)); // ['Ana', 25]
+```
+
+---
+
+## 🔗 Combinación y diferencias
+
+```php
+$a = ['red', 'green', 'blue'];
+$b = ['green', 'yellow'];
+
+print_r(array_merge($a, $b));      // une arrays
+print_r(array_diff($a, $b));       // ['red', 'blue']
+print_r(array_intersect($a, $b));  // ['green']
+```
+
+---
+
+## 🧠 Transformación de datos
+
+```php
+$nums = [1, 2, 3, 4, 5];
+
+$dobles = array_map(fn($n) => $n * 2, $nums);   // [2, 4, 6, 8, 10]
+$pares = array_filter($nums, fn($n) => $n % 2 === 0); // [2, 4]
+$suma = array_reduce($nums, fn($carry, $n) => $carry + $n, 0); // 15
+```
+
+---
+
+## 📦 Modificación del array
+
+```php
+$stack = [1, 2, 3];
+
+array_push($stack, 4); // añade al final
+array_pop($stack);     // elimina el último
+array_unshift($stack, 0); // añade al principio
+array_shift($stack);      // elimina el primero
+
+print_r($stack);
+```
+
+---
+
+## ✂️ Cortes, sumas y ordenación
+
+```php
+$nums = [10, 20, 30, 40, 50];
+
+print_r(array_slice($nums, 1, 3)); // [20, 30, 40]
+array_splice($nums, 2, 1, [99]);   // reemplaza posición 2 por 99
+
+echo array_sum($nums); // suma total
+
+sort($nums);  // orden ascendente
+rsort($nums); // descendente
+```
+
+---
+
+## 🔠 Ordenación avanzada
+
+```php
+$people = ['John' => 30, 'Ana' => 25, 'Mark' => 35];
+
+asort($people); // por valor ascendente
+ksort($people); // por clave ascendente
+arsort($people); // por valor descendente
+krsort($people); // por clave descendente
+```
+
+---
+
+## 🧩 Ordenación personalizada y aleatoria
+
+```php
+$numbers = [3, 1, 4, 2];
+
+usort($numbers, fn($a, $b) => $a <=> $b); // orden numérico
+shuffle($numbers); // orden aleatorio
+
+print_r($numbers);
+```
+
+---
+
+## 📈 Crear rangos
+
+```php
+$range = range(1, 5); // [1, 2, 3, 4, 5]
+print_r($range);
+```
 
 ## Funciones
 ```php
