@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tutorial systemd (PHP: Apache/Nginx, PHP-FPM y CLI) — Programación de Servicios y Procesos</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    :root { --brand:#0a3d62; --accent:#1e90ff; --ink:#1b1f24; --bg:#f5f8fc; }
+    body { background-color: var(--bg); color: var(--ink); }
+    .hero { background: linear-gradient(120deg, var(--brand), var(--accent)); color: #fff; padding: 4rem 1rem; border-radius: 0 0 2rem 2rem; }
+    .glass { background: rgba(255,255,255,0.9); border-radius: 1rem; padding: 2rem; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    code { background: #fff8c5; color:#b42318; padding: 0.2rem 0.4rem; border-radius: 0.3rem; }
+    pre code { display:block; background:#0b1220; color:#e2e8f0; padding:1rem; border-radius:.75rem; overflow:auto; }
+    .section-icon { font-size: 1.4rem; margin-right: 0.4rem; color: var(--accent); }
+    .sidebar { position: fixed; top: 0; left: 0; height: 100%; width: 250px; background-color: var(--brand); color: white; padding-top: 2rem; }
+    .sidebar a { color: white; text-decoration: none; display: block; padding: 0.8rem 1.2rem; border-left: 4px solid transparent; }
+    .sidebar a:hover { background-color: var(--accent); border-left: 4px solid #ffdd00; }
+    .content { margin-left: 270px; padding: 2rem; }
+    @media (max-width: 768px) { .sidebar { display: none; } .content { margin-left: 0; } }
+  </style>
+</head>
+<body>
+
+<!-- Menú lateral -->
+<nav class="sidebar">
+  <h4 class="text-center mb-4"><i class="bi bi-gear-fill"></i> systemd PHP</h4>
+  <a href="#intro"><i class="bi bi-cpu"></i> ¿Qué es systemd?</a>
+  <a href="#comandos"><i class="bi bi-terminal"></i> Comandos esenciales</a>
+  <a href="#dif-systemd-cron"><i class="bi bi-arrow-left-right"></i> Diferencias: systemd vs crontab</a>
+  <a href="#servicios"><i class="bi bi-diagram-3"></i> Crear servicios PHP</a>
+  <a href="#timers"><i class="bi bi-alarm"></i> Timers y automatización</a>
+  <a href="#monitor"><i class="bi bi-journal-text"></i> Monitorización</a>
+  <a href="#hardening"><i class="bi bi-shield-lock"></i> Hardening</a>
+  <a href="#actividades"><i class="bi bi-lightbulb"></i> Actividades prácticas</a>
+</nav>
+
+<div class="content">
+<header class="hero text-center">
+  <h1 class="fw-bold">Tutorial de <span class="text-warning">systemd</span> <small class="fs-5">(PHP: Apache/Nginx, PHP-FPM y CLI)</small></h1>
+  <p class="lead">Despliegue de aplicaciones <strong>web y tareas programadas</strong> en PHP</p>
+</header>
+
+<main class="container my-5">
+  <!-- Intro -->
+  <section id="intro" class="glass mb-4">
+    <h2><i class="bi bi-cpu section-icon"></i>¿Qué es systemd?</h2>
+    <p><strong>systemd</strong> es el sistema de inicio moderno de Linux que gestiona procesos, servicios y recursos. En entornos PHP lo usaremos para:</p>
+    <ul class="list-unstyled ms-2">
+      <li class="mb-2"><i class="bi bi-gear-fill text-primary me-2"></i> Ejecutar y supervisar <em>daemons</em> (p. ej., <code>php-fpm</code>, <code>queue workers</code> de Laravel).</li>
+      <li class="mb-2"><i class="bi bi-plug-fill text-success me-2"></i> Crear servicios para <code>php-cli</code> o workers en segundo plano.</li>
+      <li class="mb-2"><i class="bi bi-alarm-fill text-warning me-2"></i> Programar tareas con <code>.timer</code> (alternativa robusta a <code>cron</code>).</li>
+      <li class="mb-2"><i class="bi bi-shield-lock-fill text-danger me-2"></i> Aislar y endurecer servicios con directivas de seguridad.</li>
+    </ul>
+  </section>
+
+  <!-- Comandos -->
+  <section id="comandos" class="glass mb-4">
+    <h2><i class="bi bi-terminal section-icon"></i>Comandos esenciales</h2>
+    <p class="mb-3">Tabla de comandos básicos para administrar <code>php-fpm</code>, <code>apache2</code>/<code>nginx</code> y servicios PHP con <code>systemd</code>:</p>
+    <div class="table-responsive mb-4">
+      <table class="table table-striped align-middle">
+        <thead class="table-dark">
+          <tr>
+            <th><i class="bi bi-keyboard"></i> Comando</th>
+            <th><i class="bi bi-card-text"></i> Descripción</th>
+            <th><i class="bi bi-gear"></i> Ejemplo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>systemctl status &lt;svc&gt;</code></td>
+            <td>Estado + últimos logs + <strong>CGroup</strong> (árbol de procesos).</td>
+            <td><code>sudo systemctl status php8.2-fpm</code></td>
+          </tr>
+          <tr>
+            <td><code>systemctl start|stop|restart &lt;svc&gt;</code></td>
+            <td>Iniciar, detener o reiniciar un servicio.</td>
+            <td><code>sudo systemctl restart apache2</code></td>
+          </tr>
+          <tr>
+            <td><code>systemctl enable|disable &lt;svc&gt;</code></td>
+            <td>Habilitar/deshabilitar arranque automático.</td>
+            <td><code>sudo systemctl enable php-worker</code></td>
+          </tr>
+          <tr>
+            <td><code>systemctl list-units --type=service</code></td>
+            <td>Listar servicios cargados/activos.</td>
+            <td><code>systemctl list-units --type=service | grep php</code></td>
+          </tr>
+          <tr>
+            <td><code>journalctl -u &lt;svc&gt;</code></td>
+            <td>Ver registros (logs) de un servicio.</td>
+            <td><code>sudo journalctl -u php-worker -f</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="alert alert-info mt-2">
+      <i class="bi bi-diagram-3"></i>
+      <strong>Árbol en <code>systemctl status</code>:</strong> lo que aparece bajo <code>CGroup:</code> son procesos de la unidad (no dependencias). Para dependencias reales usa <code>systemctl list-dependencies</code> o <code>systemd-analyze critical-chain</code>.
+    </div>
+  </section>
+
+  <!-- Diferencias -->
+  <section id="dif-systemd-cron" class="glass mb-4">
+    <h2><i class="bi bi-arrow-left-right section-icon"></i>🔵 Diferencias entre <code>systemd</code> y <code>crontab</code></h2>
+    <div class="table-responsive mb-3">
+      <table class="table table-striped align-middle">
+        <thead class="table-dark">
+          <tr>
+            <th><i class="bi bi-diagram-3"></i> Característica</th>
+            <th><i class="bi bi-gear"></i> <code>systemd</code> (services/timers)</th>
+            <th><i class="bi bi-clock"></i> <code>crontab</code></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Rol principal</td><td>Gestión integral de servicios.</td><td>Planificador por tiempo.</td></tr>
+          <tr><td>Sintaxis</td><td><code>OnCalendar=</code>, <code>OnBootSec=</code>…</td><td>Campos cron (<code>m h dom mon dow</code>).</td></tr>
+          <tr><td>Dependencias</td><td><code>After=</code>, <code>Requires=</code>, <code>Wants=</code>.</td><td>No gestiona dependencias.</td></tr>
+          <tr><td>Logs</td><td><code>journalctl -u</code> por unidad.</td><td>Redirecciones o syslog.</td></tr>
+          <tr><td>Resiliencia</td><td><code>Restart=</code>, timers <code>Persistent=true</code>.</td><td>Si se pierde la ventana, no reejecuta.</td></tr>
+          <tr><td>Seguridad</td><td>Hardening (p. ej., <code>ProtectSystem</code>).</td><td>Sin aislamiento nativo.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title"><i class="bi bi-alarm"></i> Ejemplo <code>systemd</code> timer</h5>
+<pre><code># /etc/systemd/system/cleanup.service
+[Unit]
+Description=Limpieza temporal en PHP (oneshot)
+[Service]
+Type=oneshot
+User=www-data
+ExecStart=/usr/bin/php /var/www/html/scripts/cleanup.php
+
+# /etc/systemd/system/cleanup.timer
+[Unit]
+Description=Programa limpieza temporal (PHP)
+[Timer]
+OnCalendar=hourly
+Persistent=true
+[Install]
+WantedBy=timers.target
+
+# Activación
+sudo systemctl daemon-reload
+sudo systemctl enable --now cleanup.timer
+</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title"><i class="bi bi-calendar3"></i> Ejemplo <code>crontab</code></h5>
+<pre><code># Ejecutar cada hora al minuto 0
+0 * * * * /usr/bin/php /var/www/html/scripts/cleanup.php >> /var/log/cleanup.log 2>&1
+
+# Ejecutar al arrancar
+@reboot /usr/bin/php /var/www/html/scripts/onboot.php
+</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="alert alert-secondary mt-3 small">
+      <i class="bi bi-lightbulb"></i>
+      <strong>Guía rápida:</strong> Usa <code>systemd</code> para servicios críticos y <code>crontab</code> para tareas puntuales y simples.
+    </div>
+  </section>
+
+  <!-- Servicios PHP -->
+  <section id="servicios" class="glass mb-4">
+    <h2><i class="bi bi-diagram-3 section-icon"></i>Creación de servicios PHP</h2>
+
+    <div class="table-responsive mb-3">
+      <table class="table table-striped align-middle">
+        <thead class="table-dark">
+          <tr>
+            <th><i class="bi bi-gear"></i> Tipo</th>
+            <th><i class="bi bi-card-text"></i> Descripción</th>
+            <th><i class="bi bi-tools"></i> Uso típico</th>
+            <th><i class="bi bi-file-earmark-code"></i> Unidad</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge bg-primary"><i class="bi bi-hdd-network"></i> PHP-FPM</span></td>
+            <td>Gestor de procesos FastCGI para PHP.</td>
+            <td>PHP con Nginx/Apache (modo proxy fcgi).</td>
+            <td><code>php8.2-fpm.service</code> (paquete oficial)</td>
+          </tr>
+          <tr>
+            <td><span class="badge bg-secondary"><i class="bi bi-box"></i> PHP CLI</span></td>
+            <td>Script PHP ejecutado como demonio/worker.</td>
+            <td>Workers de colas (Laravel/Symfony), bots, daemons.</td>
+            <td><code>php-worker.service</code></td>
+          </tr>
+          <tr>
+            <td><span class="badge bg-info text-dark"><i class="bi bi-alarm"></i> Timer</span></td>
+            <td>Ejecuta un <code>.service</code> puntual en horarios.</td>
+            <td>Backups, limpieza, jobs recurrentes.</td>
+            <td><code>tarea-php.service</code> + <code>.timer</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="alert alert-info mb-3 shadow-sm">
+      <i class="bi bi-github fs-4 me-2"></i>
+      <strong>Repositorio base del alumnado</strong><br>
+      <span>Ejemplo sencillo de estructura para scripts PHP en <code>scripts/</code> y <code>public/</code>.</span><br>
+      <a href="#" class="btn btn-dark btn-sm mt-2" onclick="alert('Sustituye por tu repositorio base');return false;">
+        <i class="bi bi-git"></i> Realizar fork en GitHub
+      </a>
+    </div>
+
+    <!-- Ejemplo A: Apache + PHP-FPM -->
+    <div class="accordion" id="accServicios">
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="svcAHead">
+          <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#svcA" aria-expanded="true" aria-controls="svcA">
+            <i class="bi bi-cloud-arrow-up me-2"></i> Ejemplo A · Desplegar PHP con Apache2 + PHP-FPM
+          </button>
+        </h2>
+        <div id="svcA" class="accordion-collapse collapse show" aria-labelledby="svcAHead" data-bs-parent="#accServicios">
+          <div class="accordion-body">
+            <section id="php-apache" class="glass mb-4">
+  <h2><i class="bi bi-filetype-php section-icon"></i> PHP con Apache2 (Proxy a PHP-FPM)</h2>
+  <p class="mb-3">Configuración mínima de un <code>VirtualHost</code> que envía las peticiones PHP a <code>php-fpm</code> via <code>proxy_fcgi</code>.</p>
+<pre><code># Habilita módulos y sitio
+sudo a2enmod proxy proxy_fcgi setenvif rewrite
+sudo a2enconf php8.2-fpm
+
+# /etc/apache2/sites-available/miapp.conf
+&lt;VirtualHost *:80&gt;
+  ServerName miapp.local
+  DocumentRoot /var/www/miapp/public
+  &lt;Directory /var/www/miapp/public&gt;
+    AllowOverride All
+    Require all granted
+  &lt;/Directory&gt;
+  # Si usas php-fpm por socket:
+  &lt;FilesMatch \.php$&gt;
+    SetHandler "proxy:unix:/run/php/php8.2-fpm.sock|fcgi://localhost/"
+  &lt;/FilesMatch&gt;
+&lt;/VirtualHost&gt;
+
+sudo a2ensite miapp && sudo systemctl reload apache2
+</code></pre>
+
+  <div class="alert alert-secondary small"><i class="bi bi-info-circle"></i>
+    Alternativa Nginx: usa <code>fastcgi_pass unix:/run/php/php8.2-fpm.sock;</code> y <code>include fastcgi_params;</code>.
+  </div>
+
+  <h3 class="mt-4">Estructura mínima del proyecto</h3>
+<pre><code>miapp/
+ ├─ public/
+ │   ├─ index.php
+ │   └─ assets/
+ └─ scripts/
+     └─ cleanup.php
+</code></pre>
+
+  <h3 class="mt-2">index.php (Hola mundo + info de proceso)</h3>
+<pre><code>&lt;?php
+header('Content-Type: text/html; charset=UTF-8');
+$pid = getmypid();
+echo "&lt;h1&gt;Hola desde PHP&lt;/h1&gt;&lt;p&gt;PID: {$pid}&lt;/p&gt;";
+</code></pre>
+            </section>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ejemplo B: Servicio para PHP CLI / Worker -->
+      <div class="accordion-item mt-3">
+        <h2 class="accordion-header" id="svcBHead">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#svcB" aria-expanded="false" aria-controls="svcB">
+            <i class="bi bi-window-stack me-2"></i> Ejemplo B · Script PHP (CLI) como servicio systemd
+          </button>
+        </h2>
+        <div id="svcB" class="accordion-collapse collapse" aria-labelledby="svcBHead" data-bs-parent="#accServicios">
+          <div class="accordion-body">
+<pre><code># /etc/systemd/system/php-worker.service
+[Unit]
+Description=Worker en PHP (colas / bot / daemon)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/miapp
+ExecStart=/usr/bin/php /var/www/miapp/scripts/worker.php
+Restart=on-failure
+RestartSec=5
+# Endurecimiento básico
+NoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true
+ReadWritePaths=/var/www/miapp/storage
+
+[Install]
+WantedBy=multi-user.target
+
+# Gestión
+sudo systemctl daemon-reload
+sudo systemctl enable --now php-worker
+sudo journalctl -u php-worker -f
+</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ejemplo C: PHP ejecutando comandos del SO -->
+      <div class="accordion-item mt-3">
+        <h2 class="accordion-header" id="svcCHead">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#svcC" aria-expanded="false" aria-controls="svcC">
+            <i class="bi bi-diagram-2 me-2"></i> Paso a paso · PHP ejecutando procesos del SO (con seguridad)
+          </button>
+        </h2>
+        <div id="svcC" class="accordion-collapse collapse" aria-labelledby="svcCHead" data-bs-parent="#accServicios">
+          <div class="accordion-body">
+            <div class="table-responsive mb-3">
+              <table class="table table-bordered align-middle">
+                <thead class="table-light">
+                  <tr>
+                    <th><i class="bi bi-list-ol"></i> Paso</th>
+                    <th><i class="bi bi-card-text"></i> Acción</th>
+                    <th><i class="bi bi-code-slash"></i> Código</th>
+                    <th><i class="bi bi-check2-circle"></i> Resultado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1</td>
+                    <td>Crear endpoint seguro en PHP</td>
+                    <td>
+<pre><code>&lt;?php // public/exec.php
+header('Content-Type: text/plain; charset=UTF-8');
+// Lista blanca de comandos permitidos
+$allowed = [ 'uname -a', 'date' ];
+$cmd = $_GET['cmd'] ?? '';
+if (!in_array($cmd, $allowed, true)) { http_response_code(400); exit("Comando no permitido\n"); }
+$descriptorspec = [ 1 => ['pipe','w'], 2 => ['pipe','w'] ];
+$proc = proc_open(['/bin/sh','-c',$cmd], $descriptorspec, $pipes, null, []);
+if (is_resource($proc)) {
+  $out = stream_get_contents($pipes[1]); fclose($pipes[1]);
+  $err = stream_get_contents($pipes[2]); fclose($pipes[2]);
+  $code = proc_close($proc);
+  echo $out; if ($err) echo "\nERR:\n$err\n"; http_response_code($code?500:200);
+}
+</code></pre>
+                    </td>
+                    <td>URL <code>/exec.php?cmd=date</code> devuelve salida controlada</td>
+                  </tr>
+                  <tr>
+                    <td>2</td>
+                    <td>Proteger en servidor</td>
+                    <td>
+<pre><code># Sugerencias php.ini
+; disable_functions reduce superficie de ataque
+disable_functions = exec,passthru,shell_exec,system,popen,proc_open
+; Si necesitas alguna, habilítala sólo para este sitio vía pool FPM
+</code></pre>
+                    </td>
+                    <td>Menor riesgo de inyección de comandos</td>
+                  </tr>
+                  <tr>
+                    <td>3</td>
+                    <td>Aislar con systemd si es un worker</td>
+                    <td>
+<pre><code># Añade en la unidad del servicio\ nNoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true
+ReadWritePaths=/var/www/miapp/storage
+</code></pre>
+                    </td>
+                    <td>Contención de daños si hay fallo</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="alert alert-warning"><i class="bi bi-shield-exclamation"></i>
+              Seguridad: aplica lista blanca, no interpolar entradas del usuario en shell, registra auditoría y limita funciones peligrosas en <code>php.ini</code> o a nivel de pool FPM.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /accServicios -->
+  </section>
+
+  <!-- Timers -->
+  <section id="timers" class="glass mb-4">
+    <h2><i class="bi bi-alarm section-icon"></i>Timers en systemd</h2>
+<pre><code># /etc/systemd/system/tarea-php.service
+[Unit]
+Description=Tarea puntual en PHP (oneshot)
+[Service]
+Type=oneshot
+User=www-data
+ExecStart=/usr/bin/php /var/www/miapp/scripts/tarea.php
+
+# /etc/systemd/system/tarea-php.timer
+[Unit]
+Description=Programación de tarea PHP
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+
+# Gestión
+sudo systemctl daemon-reload
+sudo systemctl enable --now tarea-php.timer
+sudo systemctl list-timers --all | grep tarea-php
+</code></pre>
+  </section>
+
+  <!-- Monitorización -->
+  <section id="monitor" class="glass mb-4">
+    <h2><i class="bi bi-journal-text section-icon"></i>Monitorización de servicios</h2>
+<pre><code># Logs de php-fpm y del worker
+sudo journalctl -u php8.2-fpm -f
+sudo journalctl -u php-worker --since "-30m"
+
+# Estado de FPM (habilitar status en pool si procede)
+# location ~ ^/(status|ping)$ { include fastcgi_params; fastcgi_pass unix:/run/php/php8.2-fpm.sock; }
+</code></pre>
+  </section>
+
+  <!-- Hardening -->
+  <section id="hardening" class="glass mb-4">
+    <h2><i class="bi bi-shield-lock section-icon"></i>Hardening de servicios PHP</h2>
+<pre><code># En unidades systemd
+NoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true
+ProtectHome=true
+ReadWritePaths=/var/www/miapp/storage
+AmbientCapabilities=
+CapabilityBoundingSet=
+
+# En php.ini / pool FPM
+open_basedir = /var/www/miapp/:/tmp/
+expose_php = Off
+; Ajusta memoria/tiempos de ejecución según rol del servicio
+memory_limit = 128M
+max_execution_time = 30
+
+# Permisos de ficheros de la app
+# Directorios 755, ficheros 644; sólo "storage" escribible por www-data
+</code></pre>
+  </section>
+
+  <!-- Actividades -->
+  <section id="actividades" class="glass mb-5">
+  <h2><i class="bi bi-lightbulb section-icon"></i>Actividades prácticas</h2>
+
+  <!-- Controles globales -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <label class="form-label">
+        <i class="bi bi-speedometer2 me-1"></i> Dificultad global
+        <span class="badge bg-primary" id="difGlobalOut">2</span>
+      </label>
+      <input type="range" class="form-range" min="1" max="5" step="1" value="2" id="difGlobal">
+      <div class="form-text">Ajusta la complejidad de las tareas (1 básico · 5 avanzado).</div>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">
+        <i class="bi bi-clock-history me-1"></i> Duración estimada (min)
+        <span class="badge bg-secondary" id="durGlobalOut">45</span>
+      </label>
+      <input type="range" class="form-range" min="15" max="180" step="15" value="45" id="durGlobal">
+      <div class="form-text">Tiempo sugerido por actividad (puedes variarlo por tarea).</div>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">
+        <i class="bi bi-clipboard2-check me-1"></i> Peso en evaluación (%)
+        <span class="badge bg-success" id="pesoGlobalOut">15</span>
+      </label>
+      <input type="range" class="form-range" min="0" max="40" step="5" value="15" id="pesoGlobal">
+      <div class="form-text">Porcentaje sugerido sobre la nota del módulo.</div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- A1 -->
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">
+            <i class="bi bi-code-slash text-primary"></i> A1 · Desplegar sitio PHP con Apache/Nginx + PHP-FPM
+          </h5>
+          <p class="mb-2">Configura el servidor web, verifica el socket de FPM y sirve <code>index.php</code>.</p>
+          <div class="row g-3 align-items-center">
+            <div class="col-md-3">
+              <label class="form-label mb-1">Dificultad
+                <span class="badge bg-primary" id="a1DifOut">2</span>
+              </label>
+              <input type="range" class="form-range act-range" min="1" max="5" step="1" value="2" id="a1Dif">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label mb-1">Duración (min)
+                <span class="badge bg-secondary" id="a1DurOut">45</span>
+              </label>
+              <input type="range" class="form-range act-range" min="15" max="180" step="15" value="45" id="a1Dur">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label mb-1">Peso (%)
+                <span class="badge bg-success" id="a1PesoOut">15</span>
+              </label>
+              <input type="range" class="form-range act-range" min="0" max="40" step="5" value="15" id="a1Peso">
+            </div>
+            <div class="col-md-3">
+              <ul class="list-unstyled mb-0 small">
+                <li><i class="bi bi-check2-square text-success"></i> Sitio activo</li>
+                <li><i class="bi bi-check2-square text-success"></i> FPM operativo</li>
+                <li><i class="bi bi-check2-square text-success"></i> Logs verificados</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- A2 -->
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">
+            <i class="bi bi-window-stack text-warning"></i> A2 · Crear servicio para un worker PHP (CLI)
+          </h5>
+          <p class="mb-2">Ejecuta un script como servicio <code>systemd</code> con reinicio automático y directorio de trabajo.</p>
+          <div class="row g-3 align-items-center">
+            <div class="col-md-3">
+              <label class="form-label mb-1">Dificultad
+                <span class="badge bg-primary" id="a2DifOut">2</span>
+              </label>
+              <input type="range" class="form-range act-range" min="1" max="5" step="1" value="2" id="a2Dif">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label mb-1">Duración (min)
+                <span class="badge bg-secondary" id="a2DurOut">45</span>
+              </label>
+              <input type="range" class="form-range act-range" min="15" max="180" step="15" value="45" id="a2Dur">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label mb-1">Peso (%)
+                <span class="badge bg-success" id="a2PesoOut">15</span>
+              </label>
+              <input type="range" class="form-range act-range" min="0" max="40" step="5" value="15" id="a2Peso">
+            </div>
+            <div class="col-md-3">
+              <ul class="list-unstyled mb-0 small">
+                <li><i class="bi bi-check2-square text-success"></i> Unidad <code>.service</code> correcta</li>
+                <li><i class="bi bi-check2-square text-success"></i> Reinicio en fallo</li>
+                <li><i class="bi bi-check2-square text-success"></i> Logs en <code>journalctl</code></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- A3 -->
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">
+            <i class="bi bi-clock-history text-info"></i> A3 · Programar tarea PHP con timer
+          </h5>
+          <p class="mb-2">Crea un <code>.service</code> <em>oneshot</em> y su <code>.timer</code> para ejecutar una tarea periódica.</p>
+          <div class="row g-3 align-items-center">
+            <div class="col-md-3">
+              <label class="form-label mb-1">Dificultad
+                <span class="badge bg-primary" id="a3DifOut">3</span>
+              </label>
+              <input type="range" class="form-range act-range" min="1" max="5" step="1" value="3" id="a3Dif">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label mb-1">Duración (min)
+                <span class="badge bg-secondary" id="a3DurOut">60</span>
+              </label>
+              <input type="range" class="form-range act-range" min="15" max="180" step="15" value="60" id="a3Dur">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label mb-1">Peso (%)
+                <span class="badge bg-success" id="a3PesoOut">20</span>
+              </label>
+              <input type="range" class="form-range act-range" min="0" max="40" step="5" value="20" id="a3Peso">
+            </div>
+            <div class="col-md-3">
+              <ul class="list-unstyled mb-0 small">
+                <li><i class="bi bi-check2-square text-success"></i> <code>.timer</code> activo</li>
+                <li><i class="bi bi-check2-square text-success"></i> Ejecuciones registradas</li>
+                <li><i class="bi bi-check2-square text-success"></i> Idempotencia comprobada</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- A4 -->
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">
+            <i class="bi bi-shield-check text-danger"></i> A4 · Probar opciones de hardening (PHP + systemd)
+          </h5>
+          <p class="mb-2">Aplica directivas de seguridad en la unidad y restricciones en <code>php.ini</code>, valida su efecto con pruebas.</p>
+          <div class="row g-3 align-items-center">
+            <div class="col-md-3">
+              <label class="form-label mb-1">Dificultad
+                <span class="badge bg-primary" id="a4DifOut">4</span>
+              </label>
+              <input type="range" class="form-range act-range" min="1" max="5" step="1" value="4" id="a4Dif">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label mb-1">Duración (min)
+                <span class="badge bg-secondary" id="a4DurOut">75</span>
+              </label>
+              <input type="range" class="form-range act-range" min="15" max="180" step="15" value="75" id="a4Dur">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label mb-1">Peso (%)
+                <span class="badge bg-success" id="a4PesoOut">25</span>
+              </label>
+              <input type="range" class="form-range act-range" min="0" max="40" step="5" value="25" id="a4Peso">
+            </div>
+            <div class="col-md-3">
+              <ul class="list-unstyled mb-0 small">
+                <li><i class="bi bi-check2-square text-success"></i> Restricciones aplicadas</li>
+                <li><i class="bi bi-check2-square text-success"></i> Pruebas de acceso fallido</li>
+                <li><i class="bi bi-check2-square text-success"></i> Informe de hallazgos</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert alert-info mt-4">
+    <i class="bi bi-info-circle"></i>
+    Consejo: pulsa <kbd>Ctrl</kbd> + <kbd>F</kbd> y busca "A1", "A2", etc., para saltar rápidamente a la actividad correspondiente.
+  </div>
+
+  <!-- Script de sincronización de sliders -->
+  <script>
+    const bindSlider = (id, out) => {
+      const el = document.getElementById(id);
+      const outEl = document.getElementById(out);
+      if (el && outEl) { const sync = () => outEl.textContent = el.value; el.addEventListener('input', sync); sync(); }
+    };
+    // Globales
+    bindSlider('difGlobal','difGlobalOut');
+    bindSlider('durGlobal','durGlobalOut');
+    bindSlider('pesoGlobal','pesoGlobalOut');
+
+    // Actividades
+    ['a1Dif','a1Dur','a1Peso','a2Dif','a2Dur','a2Peso','a3Dif','a3Dur','a3Peso','a4Dif','a4Dur','a4Peso']
+      .forEach(id => bindSlider(id, id+'Out'));
+
+    // Propagación desde los globales a cada actividad
+    const syncAll = (srcId, targets) => {
+      const src = document.getElementById(srcId);
+      src && src.addEventListener('change', () => {
+        targets.forEach(t => {
+          const el = document.getElementById(t);
+          const out = document.getElementById(t+'Out');
+          if (el && out) { el.value = src.value; out.textContent = src.value; }
+        });
+      });
+    };
+    syncAll('difGlobal', ['a1Dif','a2Dif','a3Dif','a4Dif']);
+    syncAll('durGlobal', ['a1Dur','a2Dur','a3Dur','a4Dur']);
+    syncAll('pesoGlobal', ['a1Peso','a2Peso','a3Peso','a4Peso']);
+  </script>
+</section>
+
+</main>
+
+<footer class="text-center py-4 bg-dark text-light">
+  <p class="mb-0">© 2025 | Módulo 0490 - Programación de Servicios y Procesos | FP DAW / DAM</p>
+</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
