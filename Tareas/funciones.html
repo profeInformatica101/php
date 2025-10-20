@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Funciones en PHP — Guía y Ejercicio</title>
+  <meta name="description" content="Guía docente profesional sobre funciones en PHP con ejemplos, buenas prácticas y ejercicio de entrega.">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    code{color:brown};
+    :root {
+      --brand: #0d6efd;
+      --brand-ink: #0b5ed7;
+      --ink: #111827;
+      --muted: #6b7280;
+      --bg: #f8fafc;
+      --card: #ffffff;
+    }
+    html { scroll-behavior: smooth; }
+    body { background-color: var(--bg); color: var(--ink); }
+    .container-narrow { max-width: 1024px; }
+    .shadow-soft { box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+    .code-wrap { position: relative; }
+    .copy-btn {
+      position: absolute; top: .5rem; right: .5rem;
+      z-index: 2; font-size: .8rem;
+    }
+    pre code {
+      background: #0f172a0d; /* azul pálido */
+      padding: 1rem; display: block; border-radius: .5rem;
+      overflow-x: auto;
+    }
+    h1, h2, h3 { color: var(--brand); }
+    .table thead { background: var(--brand); color: #fff; }
+    .toc a { text-decoration: none; color: var(--brand-ink); }
+    .toc a:hover { text-decoration: underline; }
+    .badge-pill { border-radius: 999px; }
+    .callout {
+      border-left: 4px solid var(--brand);
+      background: #0d6efd0d;
+      padding: .75rem 1rem; border-radius: .5rem;
+    }
+    .footer-note { font-size: .9rem; color: var(--muted); }
+    .back-to-top {
+      position: fixed; right: 1rem; bottom: 1rem; display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- NAV -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm" aria-label="Barra de navegación">
+    <div class="container container-narrow">
+      <a class="navbar-brand fw-semibold" href="#top">Funciones en PHP</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navContent" aria-controls="navContent" aria-expanded="false" aria-label="Alternar navegación">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div id="navContent" class="collapse navbar-collapse">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item"><a class="nav-link" href="#conceptos">Conceptos</a></li>
+          <li class="nav-item"><a class="nav-link" href="#parametros">Parámetros</a></li>
+          <li class="nav-item"><a class="nav-link" href="#predefinidas">Predefinidas</a></li>
+          <li class="nav-item"><a class="nav-link" href="#buenas-practicas">Buenas prácticas</a></li>
+          <li class="nav-item"><a class="nav-link" href="#entrega">Entrega</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <main id="top" class="container container-narrow py-4">
+    <header class="mb-4 text-center">
+      <h1 class="fw-bold">📘 Funciones en PHP</h1>
+      <p class="text-muted mb-0">Guía práctica con ejemplos, estándares de calidad y ejercicio de entrega con rúbrica.</p>
+      <div class="mt-2">
+        <span class="badge bg-primary badge-pill">PHP 8+</span>
+        <span class="badge bg-outline border text-primary">Optativa</span> 
+        <span class="badge bg-success">Buenas prácticas</span>
+      </div>
+    </header>
+
+    <!-- TOC -->
+    <div class="card shadow-soft mb-4">
+      <div class="card-body">
+        <h2 class="h5 text-primary mb-3">Contenido</h2>
+        <div class="row toc">
+          <div class="col-md-6">
+            <ul class="mb-0">
+              <li><a href="#conceptos">1. Conceptos básicos</a></li>
+              <li><a href="#parametros">2. Parámetros y valores de retorno</a></li>
+            </ul>
+          </div>
+          <div class="col-md-6">
+            <ul class="mb-0">
+              <li><a href="#predefinidas">3. Funciones predefinidas</a></li>
+              <li><a href="#buenas-practicas">4. Buenas prácticas</a></li>
+              <li><a href="#entrega">5. Ejercicio de entrega</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1. CONCEPTOS -->
+    <section id="conceptos" class="mb-4">
+      <h2>🧩 1. Conceptos básicos</h2>
+      <p>Una <strong>función</strong> en PHP es un bloque de código reutilizable que realiza una tarea concreta. Se define una vez y se puede invocar múltiples veces.</p>
+
+      <div class="code-wrap mb-3">
+        <button class="btn btn-sm btn-outline-secondary copy-btn" data-copy-target="#code-saludar">Copiar</button>
+        <pre><code id="code-saludar" class="language-php">
+function saludar() {
+    echo "Hola mundo";
+}
+saludar(); // 👉 Imprime "Hola mundo"
+        </code></pre>
+      </div>
+
+      <h3 class="h5">Sintaxis general</h3>
+      <div class="code-wrap mb-3">
+        <button class="btn btn-sm btn-outline-secondary copy-btn" data-copy-target="#code-sintaxis">Copiar</button>
+        <pre><code id="code-sintaxis" class="language-php">
+function nombreFuncion($param1, $param2 = 'valorPorDefecto'): tipo_retorno {
+    // cuerpo
+    return $resultado;
+}
+        </code></pre>
+      </div>
+
+      <ul>
+        <li>El nombre <strong>no distingue mayúsculas/minúsculas</strong>.</li>
+        <li>Parámetros entre paréntesis; admite <strong>valores por defecto</strong>.</li>
+        <li>El <strong>tipo de retorno es opcional</strong>.</li>
+      </ul>
+
+      <div class="callout my-3">
+        <strong>Tipado en PHP (opcional):</strong> no es necesario indicar tipos de datos, pero desde PHP 7 se recomienda el tipado (parámetros y retorno) y <code>declare(strict_types=1)</code> para mejorar robustez y mantenibilidad.
+      </div>
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <h5 class="mb-2">🔹 Sin tipado (válido)</h5>
+          <div class="code-wrap">
+            <button class="btn btn-sm btn-outline-secondary copy-btn" data-copy-target="#code-sin-tipado">Copiar</button>
+            <pre><code id="code-sin-tipado" class="language-php">
+function sumar($a, $b) {
+    return $a + $b;
+}
+echo sumar(2, 3);      // 5
+echo sumar("2", "3");  // 5 (coerción)
+            </code></pre>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <h5 class="mb-2">🔹 Con tipado (buena práctica)</h5>
+          <div class="code-wrap">
+            <button class="btn btn-sm btn-outline-secondary copy-btn" data-copy-target="#code-con-tipado">Copiar</button>
+            <pre><code id="code-con-tipado" class="language-php">
+declare(strict_types=1);
+
+function sumar(int $a, int $b): int {
+    return $a + $b;
+}
+echo sumar(2, 3);     // 5
+// sumar("2", "3");   // ❌ Error con strict_types=1
+            </code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. PARÁMETROS Y RETORNOS -->
+    <section id="parametros" class="mb-4">
+      <h2>📥 2. Parámetros y valores de retorno</h2>
+      <p>Formas de pasar información a las funciones y controlar lo que devuelven:</p>
+
+      <ul>
+        <li>📦 <strong>Por valor</strong>: copia de la variable (comportamiento por defecto).</li>
+        <li>🔗 <strong>Por referencia</strong>: se modifica la variable original.</li>
+        <li>⚙️ <strong>Valores por defecto</strong>: parámetros opcionales.</li>
+        <li>📘 <strong>Tipado opcional</strong>: tipos en parámetros y retorno.</li>
+      </ul>
+
+      <hr>
+
+      <h4 class="text-primary mt-4">📦 Paso por valor</h4>
+      <p>Los cambios en la función <strong>no afectan</strong> a la variable externa.</p>
+      <div class="code-wrap mb-2">
+        <button class="btn btn-sm btn-outline-secondary copy-btn" data-copy-target="#code-valor">Copiar</button>
+        <pre><code id="code-valor" class="language-php">
+// Paso por valor
+function duplicar($numero) {
+    $numero = $numero * 2;
+    echo "Dentro: $numero&lt;br&gt;";
+}
+$x = 5;
+duplicar($x);
+echo "Fuera: $x"; // 5
+        </code></pre>
+      </div>
+
+      <h4 class="text-success mt-4">🔗 Paso por referencia</h4>
+      <p>Anteponiendo <code>&amp;</code>, la función actúa sobre la variable original.</p>
+      <div class="code-wrap mb-2">
+        <button class="btn btn-sm btn-outline-secondary copy-btn" data-copy-target="#code-ref">Copiar</button>
+        <pre><code id="code-ref" class="language-php">
+// Paso por referencia
+function incrementar(&$n) {
+    $n++;
+}
+$edad = 20;
+incrementar($edad);
+echo $edad; // 21
+        </code></pre>
+      </div>
+
+      <h4 class="text-warning mt-4">⚙️ Parámetros con valor por defecto</h4>
+      <div class="code-wrap mb-2">
+        <button class="btn btn-sm btn-outline-secondary copy-btn" data-copy-target="#code-defecto">Copiar</button>
+        <pre><code id="code-defecto" class="language-php">
+// Valores por defecto
+function saludar($nombre = "invitado") {
+    echo "Hola, $nombre";
+}
+saludar("Lucía"); // Hola, Lucía
+saludar();        // Hola, invitado
+        </code></pre>
+      </div>
+
+      <h4 class="text-info mt-4">📘 Tipado opcional</h4>
+      <div class="code-wrap mb-2">
+        <button class="btn btn-sm btn-outline-secondary copy-btn" data-copy-target="#code-tipado-2">Copiar</button>
+        <pre><code id="code-tipado-2" class="language-php">
+declare(strict_types=1);
+
+function areaCirculo(float $r): float {
+    return pi() * $r * $r;
+}
+echo number_format(areaCirculo(3), 2); // 28.27
+        </code></pre>
+      </div>
+      <p class="text-muted small">💡 Consejo: añade <code>number_format</code> o <code>round</code> para salidas numéricas legibles.</p>
+    </section>
+
+    <!-- 3. PREDEFINIDAS -->
+    <section id="predefinidas" class="mb-4">
+      <h2>🧰 3. Funciones predefinidas</h2>
+
+      <h3 class="mt-3">🔤 Cadenas</h3>
+      <div class="table-responsive shadow-soft">
+        <table class="table table-striped table-bordered align-middle">
+          <thead><tr><th>Función</th><th>Parámetros</th><th>Ejemplo</th></tr></thead>
+          <tbody>
+            <tr><td><code>strlen($string)</code></td><td>Cadena</td><td><code>strlen("Hola") → 4</code></td></tr>
+            <tr><td><code>strtoupper($string)</code></td><td>Cadena</td><td><code>strtoupper("php") → "PHP"</code></td></tr>
+            <tr><td><code>substr($string, $inicio, $longitud)</code></td><td>Cadena, int, int</td><td><code>substr("abcdef", 1, 3) → "bcd"</code></td></tr>
+            <tr><td><code>strpos($string, $buscar)</code></td><td>Cadena, cadena</td><td><code>strpos("hola mundo", "mundo") → 5</code></td></tr>
+            <tr><td><code>str_replace($buscar, $reemplazar, $texto)</code></td><td>Cadenas</td><td><code>str_replace("mundo","PHP","hola mundo")</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="mt-3">🔢 Arrays</h3>
+      <div class="table-responsive shadow-soft">
+        <table class="table table-striped table-bordered align-middle">
+          <thead><tr><th>Función</th><th>Parámetros</th><th>Ejemplo</th></tr></thead>
+          <tbody>
+            <tr><td><code>count($array)</code></td><td>Array</td><td><code>count([1,2,3]) → 3</code></td></tr>
+            <tr><td><code>array_push(&$array, ...$valores)</code></td><td>Array, valores</td><td><code>array_push($a, 4, 5)</code></td></tr>
+            <tr><td><code>array_merge(...$arrays)</code></td><td>Arrays</td><td><code>array_merge([1,2],[3,4])</code></td></tr>
+            <tr><td><code>array_filter($array, $callback)</code></td><td>Array, callable</td><td><code>array_filter([1,2,3,4], fn($x)=>$x%2==0)</code></td></tr>
+            <tr><td><code>array_map($callback, $array)</code></td><td>Callable, array</td><td><code>array_map('strtoupper', ['a','b'])</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="mt-3">📅 Fechas y tiempo</h3>
+      <div class="table-responsive shadow-soft">
+        <table class="table table-striped table-bordered align-middle">
+          <thead><tr><th>Función</th><th>Parámetros</th><th>Ejemplo</th></tr></thead>
+          <tbody>
+            <tr><td><code>date($formato, $timestamp = time())</code></td><td>Cadena, int</td><td><code>date("Y-m-d") → "2025-10-20"</code></td></tr>
+            <tr><td><code>time()</code></td><td>—</td><td><code>time() → 173XXXXXXX</code></td></tr>
+            <tr><td><code>strtotime($texto)</code></td><td>Cadena</td><td><code>strtotime("next Monday")</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="mt-3">🔒 Validación</h3>
+      <div class="table-responsive shadow-soft">
+        <table class="table table-striped table-bordered align-middle">
+          <thead><tr><th>Función</th><th>Parámetros</th><th>Ejemplo</th></tr></thead>
+          <tbody>
+            <tr><td><code>isset($var)</code></td><td>mixed</td><td><code>isset($x)</code></td></tr>
+            <tr><td><code>empty($var)</code></td><td>mixed</td><td><code>empty("") → true</code></td></tr>
+            <tr><td><code>is_numeric($var)</code></td><td>mixed</td><td><code>is_numeric("3.14") → true</code></td></tr>
+            <tr><td><code>filter_var($var, $filtro)</code></td><td>mixed, int</td><td><code>filter_var("a@b.com", FILTER_VALIDATE_EMAIL)</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 4. BUENAS PRÁCTICAS -->
+    <section id="buenas-practicas" class="mb-4">
+      <h2>🧱 4. Buenas prácticas</h2>
+      <ul class="mb-3">
+        <li>💡 <strong>Una función = una responsabilidad</strong>.</li>
+        <li>📛 Nombres descriptivos (p.ej., <code>calcularIVA()</code>).</li>
+        <li>⚙️ Tipado y <code>declare(strict_types=1);</code> cuando sea posible.</li>
+        <li>🧪 Pruebas unitarias o scripts manuales reproducibles.</li>
+        <li>📝 PHPDoc para parámetros/retorno y casos borde.</li>
+      </ul>
+
+      <div class="code-wrap">
+        <button class="btn btn-sm btn-outline-secondary copy-btn" data-copy-target="#code-phpdoc">Copiar</button>
+        <pre><code id="code-phpdoc" class="language-php">
+/**
+ * Calcula el área de un círculo.
+ * @param float $radio Radio del círculo (en unidades del sistema).
+ * @return float Área calculada.
+ * @throws InvalidArgumentException Si $radio &lt;= 0.
+ */
+function area(float $radio): float {
+    if ($radio &lt;= 0) {
+        throw new InvalidArgumentException('El radio debe ser positivo.');
+    }
+    return pi() * ($radio ** 2);
+}
+        </code></pre>
+      </div>
+    </section>
+
+    <!-- 5. EJERCICIO DE ENTREGA -->
+    <section id="entrega" class="mb-5">
+      <h2>🧪 5. Ejercicio de entrega</h2>
+
+      <div class="card border-0 shadow-soft">
+        <div class="card-body">
+          <h5 class="card-title text-primary fw-bold">Proyecto: “Funciones útiles en PHP”</h5>
+          <p class="card-text">Aplica creación, uso e integración de funciones, organización del código y colaboración con GitHub.</p>
+
+          <h4 class="h6 text-uppercase text-muted mt-3">Estructura</h4>
+          <pre><code>
+ejercicios_funciones_php/
+├── A/
+│   ├── index.php          → Usa funciones ya creadas (require_once)
+│   └── funciones.php      → Archivo proporcionado por el profesor
+└── B/
+    ├── index.php          → Demostración de funciones creadas por el alumno
+    └── funciones_b.php    → Nuevas funciones implementadas
+          </code></pre>
+
+          <div class="alert alert-info" role="alert">
+            Sube la carpeta a tu repositorio <strong>ejercicios_funciones_php</strong> y entrega la URL en Moodle.
+          </div>
+
+          <hr>
+          <h4 class="text-success">🅰️ Parte A · Uso de funciones existentes</h4>
+          <ul>
+            <li>Importa <code><a href="funciones.php">funciones.php</a> </code> con <code>require_once</code> en <code>A/index.php</code>.</li>
+            <li>Llama al menos a <strong>cinco</strong> funciones distintas del archivo.</li>
+            <li>Muestra:
+              <ul>
+                <li>Llamada (parámetros de ejemplo).</li>
+                <li>Resultado devuelto / salida.</li>
+                <li>Un caso borde o error controlado (si aplica).</li>
+              </ul>
+            </li>
+          </ul>
+
+          <div class="code-wrap mb-3">
+            <button class="btn btn-sm btn-outline-secondary copy-btn" data-copy-target="#code-ejA">Copiar</button>
+            <pre><code id="code-ejA" class="language-php">
+require_once __DIR__ . '/funciones.php';
+
+echo "Resultado de sumar(5,3): " . sumar(5, 3) . "&lt;br&gt;";
+echo "Resultado de esPar(10): " . (esPar(10) ? "Sí" : "No");
+            </code></pre>
+          </div>
+
+          <hr>
+          <h4 class="text-danger">🅱️ Parte B · Creación de funciones propias</h4>
+          <p>Implementa en <code>B/funciones_b.php</code> (mín. 5 funciones):</p>
+          <ol>
+             <li><strong>Funciones matemáticas</strong>: <code>media($numeros)</code>, <code>potencia($base, $exp)</code>, <code>esPar($n)</code>, <code>factorial($n)</code>.</li>
+  <li><strong>Funciones HTML</strong>: <code>crearLista($items)</code>, <code>tablaBootstrap($datos)</code>, <code>crearAlerta($mensaje, $tipo)</code>, <code>generarFormulario($campos)</code>.</li>
+            <li><strong>contarPalabras($texto)</strong> → <code>str_word_count()</code>.</li>
+            <li><strong>sumar(...$numeros)</strong> → <code>array_sum()</code>.</li>
+            <li><strong>buscarPalabra($palabra, $texto)</strong> → <code>strpos()</code>.</li>
+            <li><strong>guardarResultado($texto)</strong> → <code>file_put_contents()</code> a <code>resultado.txt</code>.</li>
+          </ol>
+          <p>En <code>B/index.php</code> muestra entradas, resultados y un caso borde (usa <code>try/catch</code> si procede).</p>
+
+          <div class="callout mb-3">
+            💡 Consejo: utiliza <code>array_map</code>/<code>array_filter</code> para generar vistas con datos de ejemplo y mejorar la legibilidad.
+          </div>
+
+          <p class="footer-note mt-3">Entrega final: <code>https://github.com/&lt;tu_usuario&gt;/ejercicios_funciones_php</code>.</p>
+        </div>
+      </div>
+    </section>
+
+    <p class="text-center footer-note mt-4">© 2025 · Material didáctico para prácticas de PHP · Bootstrap 5</p>
+  </main>
+
+  <button class="btn btn-primary back-to-top" id="backToTop" aria-label="Volver arriba">↑</button>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Botones "Copiar"
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = document.querySelector(btn.dataset.copyTarget);
+        if (!target) return;
+        const text = target.innerText.replace(/\u00A0/g, ' ');
+        navigator.clipboard.writeText(text).then(() => {
+          const original = btn.innerText;
+          btn.innerText = 'Copiado ✓';
+          btn.classList.remove('btn-outline-secondary');
+          btn.classList.add('btn-success');
+          setTimeout(() => { btn.innerText = original; btn.classList.add('btn-outline-secondary'); btn.classList.remove('btn-success'); }, 1200);
+        });
+      });
+    });
+    // Back to top
+    const back = document.getElementById('backToTop');
+    window.addEventListener('scroll', () => {
+      back.style.display = window.scrollY > 400 ? 'block' : 'none';
+    });
+    back.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+  </script>
+</body>
+</html>
